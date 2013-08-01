@@ -6,55 +6,65 @@
 jQuery(document).ready(function($) {
     //Common functions
     function getURLParameter(name) {
-    return decodeURI(
-        (RegExp(name + '=' + '(.+?)(&|$)').exec(location.search)||[,null])[1]
-    );
+        return decodeURI(
+                (RegExp(name + '=' + '(.+?)(&|$)').exec(location.search) || [, null])[1]
+                );
     }
-    
-    
-    // codes for polls page
-    if (pagenow == 'wppolls') {
+    //delete a poll option
+    function delete_option(self) {
+        self.parent().parent().fadeOut().remove();
+        //renumber the options
+        var i = 0;
+        $('.option_number').each(function() {
+            i++;
+            $(this).text(i);
+        })
+    }
+
+
+        // codes for polls page
+        if (pagenow == 'wppolls') {
 
         $('#add_poll_meta_box .hndle').hide();
         $('div#add_poll_meta_box').removeClass('postbox');
         var to_show = PollsAdminVars.options_to_show;
-        if(Object.prototype.toString.call( to_show ) === '[object Array]' && to_show.length >0){
-            for(i in to_show){
-               
+        if (Object.prototype.toString.call(to_show) === '[object Array]' && to_show.length > 0) {
+            for (i in to_show) {
+
                 $('#poll_option_div_' + to_show[i]).show();
-                
+
             }
         }
-        
-        else 
-        for (i = 1; i <= 2; i++) {
-            $('#poll_option_div_' + i).show();
-        }
+
+        else
+            for (i = 1; i <= 2; i++) {
+                $('#poll_option_div_' + i).show();
+            }
 
         $('#publish').click(function(evt) {
             alert('check');
             $('.wp-editor-area').each(function() {
                 //alert($(this).text());
-            })
+            });
             //evt.preventDefault();
-            
+
             // remove the empty fields
-            $('.poll_option_admin:hidden').each(function(){
+            $('.poll_option_admin:hidden').each(function() {
                 $(this).remove();
-                
-            })
+
+            });
 
 
-        })
+        });
 
         //add option
         $('#add_option').click(function(evt) {
             evt.preventDefault();
-            var v_items = $('.poll_option_admin:visible').length
-            $('.poll_option_admin :eq('+ v_items + ')').show();
+            var v_items = $('.poll_option_admin:visible').length;
+            $('.poll_option_admin :eq(' + v_items + ')').show();
 
 
-        })
+        });
 
         //remove option
         $('.delete_option').click(function(evt) {
@@ -64,73 +74,45 @@ jQuery(document).ready(function($) {
             var post_id = getURLParameter(post);
             //alert(id);
             var item_nums = $('.poll_option_admin:visible').length;
-            if (item_nums == 2){
+            if (item_nums == 2) {
                 alert("There must be at least 2 items in a Poll");
                 return;
             }
-       
-       
-        //delete from database using ajax delete the html element on success
-        //only do ajax if poll is being updated
-        if(post_id !==  'wppolls')
-        $.ajax({
-            type: "post",
-            url: ajaxurl,
-            timeout: 5000,
-            data: {
-                'action': 'option_remove',
-                'id': id,
-                'post_id': post_id
-            },
-            success: function(data) {                
-                    alert(data);
-                    self.parent().parent().fadeOut().remove();
-                     //renumber the options
-                    var i  = 0;
-                    $('.option_number').each(function(){
-                        i++;
-                        $(this).text(i);
-                
-                
-            })
-                
-            },
-            error: function(data) {
-               alert('Ajax failure, Unable to delete the option');
-            }
-        })//end of delete ajax
-            
-            
 
 
-        })// end of remove option
+            //delete from database using ajax delete the html element on success
+            //only do ajax if poll is being updated else only delete the other ids
+            if (post_id !== 'wppolls')
+                $.ajax({
+                    type: "post",
+                    url: ajaxurl,
+                    timeout: 5000,
+                    data: {
+                        'action': 'option_remove',
+                        'id': id,
+                        'post_id': post_id
+                    },
+                    success: function(data) {
+                        delete_option(self);                     
 
-    }//END OF POLLS PAGE
+                    },
+                    error: function(data) {
+                        alert('Ajax failure, Unable to delete the option');
+                    }
+                })//end of delete ajax
+            else
+                delete_option(self);
 
 
 
 
+        });// end of remove option
 
-    $('.widefat img').bind('click', function(evt) {
-        evt.preventDefault();
-        var id = $(this).attr('class');
+    };//END OF POLLS PAGE
 
-        var self = $(this);
 
-        $.ajax({
-            type: "post",
-            url: ajaxurl,
-            timeout: 5000,
-            data: {
-                'action': 'city_remove',
-                'id': id
-            },
-            success: function(data) {
-                if (data == 1) {
-                    self.parent().parent().parent().hide('slow');
-                }
-            }
-        })	//end of ajax	
 
-    })
-})
+
+    
+});
+

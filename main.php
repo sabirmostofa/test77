@@ -23,6 +23,7 @@ class wpSuperPolls {
     public $image_dir = '';
     public $meta_box = array();
 
+    //initializing variables and adding hooks
     function __construct() {
         global $wpdb;
         //$this->set_meta();
@@ -45,11 +46,12 @@ class wpSuperPolls {
         // register_activation_hook(__FILE__, array($this, 'init_cron'));
         register_deactivation_hook(__FILE__, array($this, 'deactivation_tasks'));
     }
-
+    
+    //creating sidebar menu in the admin size
     function CreateMenu() {
         add_submenu_page('options-general.php', 'Polls Settings', 'Polls Settings', 'activate_plugins', 'wpSuperPolls', array($this, 'OptionsPage'));
     }
-
+   // add an option page for the plugin
     function OptionsPage() {
         include 'options-page.php';
     }
@@ -82,6 +84,7 @@ class wpSuperPolls {
         register_post_type('wppolls', $args);
     }
 
+    // save or update the poll  in database
     function save_custom_poll($post_id) {
         global $wpdb;
 
@@ -179,6 +182,7 @@ class wpSuperPolls {
         }
     }
 
+    // cleanups when a poll is deleted
     function delete_poll_action($postid) {
         global $post_type, $wpdb;
         if ($post_type != 'wppolls')
@@ -257,7 +261,7 @@ class wpSuperPolls {
          */
     }
 
-    //metaboxes
+    //metaboxe for the poll page
     function render_poll_metabox() {
 
         include 'poll_metabox.php';
@@ -330,6 +334,7 @@ class wpSuperPolls {
         wp_editor($post->post_content, 'content');
     }
 
+    //necessary scripts for the admin side load only for the necessary pages
     function admin_scripts() {
         global $typenow, $post;
         if ($typenow == "wppolls") {
@@ -354,6 +359,7 @@ class wpSuperPolls {
         }
     }
 
+    //add javascript for the front side
     function front_scripts() {
         global $post;
         if (is_page() || is_single()) {
@@ -365,6 +371,7 @@ class wpSuperPolls {
         }
     }
 
+    //add css to the front side
     function front_css() {
         if (!(is_admin())):
             wp_enqueue_style('wpvr_front_css', plugins_url('/', __FILE__) . 'css/style_front.css');
@@ -378,6 +385,7 @@ class wpSuperPolls {
             return true;
     }
 
+    //creates the necessary tables for the plugin
     function create_table() {
         global $wpdb;
         $sql = "CREATE TABLE IF NOT EXISTS $this->table_que  (
@@ -478,6 +486,7 @@ class wpSuperPolls {
         }
     }
 
+    
     function not_inserted_before($id, $city) {
         global $wpdb;
         $in = $wpdb->get_var("select post_id from $this->table_data where cg_id=$id and city_id=$city");
@@ -485,6 +494,7 @@ class wpSuperPolls {
             return true;
     }
 
+    //tasks to do on deactivation
     function deactivation_tasks() {
 
         wp_clear_scheduled_hook('wp_rental_cron');
@@ -492,7 +502,7 @@ class wpSuperPolls {
 
     //options in db
     function options_to_show($post_id) {
-        global $typenow, $wpdb;
+        global $typenow;
         //exit($pagenow);
         if ($typenow != 'wppolls')
             return 1;
@@ -514,7 +524,7 @@ class wpSuperPolls {
 		WHERE $key=%d
 	", $val));
     }
-
+    //return a value based on a key in a table
     function var_in_db($key, $table, $where = array(), $type = '%d') {
         global $wpdb;
         $whr = key($where);
@@ -527,6 +537,7 @@ class wpSuperPolls {
 	", $where[$whr]));
     }
 
+    //returns only id or checks if exists in db based on two
     function vars_in_db($key, $val, $key1, $val1, $table) {
         global $wpdb;
 
@@ -539,6 +550,7 @@ class wpSuperPolls {
 	", $val, $val1));
     }
 
+    //returns question description
     function get_question_des($id) {
         global $wpdb;
         $des = $wpdb->get_var($wpdb->prepare(
@@ -552,6 +564,7 @@ class wpSuperPolls {
         return ($des) ? $des : '';
     }
 
+    //return question description of a poll
     function get_option_des($poll_id, $opt_id) {
         global $wpdb;
         return $wpdb->get_var(
@@ -586,6 +599,7 @@ class wpSuperPolls {
         return $cur_opts;
     }
 
+    //cleanup when a poll option is deleted
     function delete_poll_option($post_id, $opt_id) {
         global $wpdb;
         return $wpdb->delete($this->table_opt, array('ques_id' => $post_id, 'opt_id' => $opt_id));
@@ -595,14 +609,10 @@ class wpSuperPolls {
 
     // ajax functions
     function ajax_remove_option() {
-        global $wpdb;
+        
         $post_id = $_POST['post_id'];
         $opt_id = (int) preg_replace("/[^0-9]/", "", $_POST['id']);
         echo $this->delete_poll_option($post_id, $opt_id);
-
-
-
-
         exit();
     }
 
