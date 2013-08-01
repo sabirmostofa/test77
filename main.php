@@ -32,6 +32,7 @@ class wpSuperPolls {
         $this->image_dir = plugins_url('/', __FILE__) . 'images/';
         add_action('init', array($this, 'add_custom_poll'));
         add_action('save_post', array($this, 'save_custom_poll'));
+        add_action('before_delete_post', array($this, 'delete_poll_action'));
         add_action('admin_enqueue_scripts', array($this, 'admin_scripts'));
         add_action('wp_enqueue_scripts', array($this, 'front_scripts'));
         add_action('add_meta_boxes', array($this, 'polls_meta_boxes'));
@@ -83,14 +84,14 @@ class wpSuperPolls {
 
     function save_custom_poll($post_id) {
         global $wpdb;
-        
+
         //save post hook is called also in a new post/poll creation
-        
-        if(!array_key_exists('poll_question', $_POST))
-                return;
+
+        if (!array_key_exists('poll_question', $_POST))
+            return;
 
         //insert question or update
-        if ($this->var_in_db('parent_id', $post_id, $this->table_que))
+        if ($this->id_in_db('parent_id', $post_id, $this->table_que))
             $wpdb->update(
                     $this->table_que, array(
                 'parent_id' => $post_id,
@@ -120,15 +121,17 @@ class wpSuperPolls {
 
         //insert options or update
         $key_ar = array_keys($_POST);
+        $active_opts = array();
         foreach ($key_ar as $key) {
             if (stripos($key, 'poll_option') !== false) {
                 $option_id = (int) preg_replace("/[^0-9]/", "", $key);
+                $active_opts[] = $option_id;
 
                 //if exists update or insert
                 var_dump($option_id);
-                
 
-                if ($this->vars_in_db('ques_id', $post_id, 'opt_id', $option_id, $this->table_opt)){
+
+                if ($this->vars_in_db('ques_id', $post_id, 'opt_id', $option_id, $this->table_opt)) {
                     $wpdb->update(
                             $this->table_opt, array(
                         'ques_id' => $post_id,
@@ -144,9 +147,7 @@ class wpSuperPolls {
                         '%s'
                             )
                     );
-                    
-                }
-                else {
+                } else {
                     //exit('trying');
                     $wpdb->insert(
                             $this->table_opt, array(
@@ -163,7 +164,39 @@ class wpSuperPolls {
                 }
             }
         }//endforaeach
-       // exit;
+        // exit;
+        //remove the old ones
+
+        $db_opts = $this->get_active_options($post_id); 
+        var_dump($db_opts);
+        $cur_opts = array();
+        foreach ($active_opts as $value) {
+            $cur_opts[] = (int) $value;
+        }
+        $to_delete = array_diff($db_opts, $cur_opts);
+        foreach ($to_delete as $opt_id) {
+            $this->delete_poll_option($post_id, $opt_id);
+        }
+    }
+
+    function delete_poll_action($postid) {
+        global $post_type, $wpdb;
+        if ($post_type != 'wppolls')
+            return;
+
+
+        //delete answers
+        $wpdb->query("");
+
+        //question
+        $wpdb->delete(
+                $this->table_que, array('parent_id' => $postid)
+        );
+
+        //options
+        $wpdb->delete(
+                $this->table_opt, array('ques_id' => $postid)
+        );
     }
 
     function polls_updated_messages($messages) {
@@ -298,22 +331,27 @@ class wpSuperPolls {
     }
 
     function admin_scripts() {
-        global $typenow;
+        global $typenow, $post;
         if ($typenow == "wppolls") {
+
             // wp_enqueue_script('wppl_bootstrap_script', plugins_url('/', __FILE__) . 'bootstrap/js/bootstrap.min.js');
             //wp_register_style('wppl_bootstrap_css', plugins_url('/', __FILE__) . 'bootstrap/css/bootstrap.min.css', false, '1.0.0');
             //wp_enqueue_style('wppl_bootstrap_css');
+
+
+            wp_enqueue_script('wppl_admin_script', plugins_url('/', __FILE__) . 'js/script_admin.js');
+            wp_register_style('wppl_admin_css', plugins_url('/', __FILE__) . 'css/style_admin.css', false, '1.0.0');
+            wp_enqueue_style('wppl_admin_css');
+
+            //set javascript vars only if post varrs are available
+            if(isset($post)){
+            $params = array(
+                'options_to_show' => $this->options_to_show($post->ID),
+                'post_id' => $post->ID
+            );
+            wp_localize_script('wppl_admin_script', 'PollsAdminVars', $params);
+            }
         }
-
-        wp_enqueue_script('wppl_admin_script', plugins_url('/', __FILE__) . 'js/script_admin.js');
-        wp_register_style('wppl_admin_css', plugins_url('/', __FILE__) . 'css/style_admin.css', false, '1.0.0');
-        wp_enqueue_style('wppl_admin_css');
-
-        //set javascript vars
-        $params = array(
-            'options_to_show' => $this->options_to_show()
-        );
-        wp_localize_script('wppl_admin_script', 'PollsAdminVars', $params);
     }
 
     function front_scripts() {
@@ -362,8 +400,11 @@ class wpSuperPolls {
         $sql2 = "CREATE TABLE IF NOT EXISTS $this->table_ans  (
 		`id` bigint(20) unsigned NOT NULL AUTO_INCREMENT,		
 		`ques_id` bigint(20) unsigned NOT NULL,
+		`option_id` bigint(20) unsigned NOT NULL,
                 `ip` varchar(16) not null default '',
-		`description` text  NOT NULL,
+                `is_user` TINYINT(1) default 0,
+                `browser` varchar(60) default '',
+                `os` varchar(40) default '',
                 `unique_val` varchar(40) not null,
 		 PRIMARY KEY (`id`)		 	
 		)";
@@ -450,12 +491,12 @@ class wpSuperPolls {
     }
 
     //options in db
-    function options_to_show() {
+    function options_to_show($post_id) {
         global $typenow, $wpdb;
         //exit($pagenow);
         if ($typenow != 'wppolls')
             return 1;
-        return 2;
+        return $this->get_active_options($post_id);
     }
 
     //database functions
@@ -463,7 +504,7 @@ class wpSuperPolls {
         global $wpdb;
     }
 
-    function var_in_db($key, $val, $table) {
+    function id_in_db($key, $val, $table) {
         global $wpdb;
 
         return $wpdb->get_var($wpdb->prepare(
@@ -472,6 +513,18 @@ class wpSuperPolls {
 		FROM $table
 		WHERE $key=%d
 	", $val));
+    }
+
+    function var_in_db($key, $table, $where = array(), $type = '%d') {
+        global $wpdb;
+        $whr = key($where);
+
+        return $wpdb->get_var($wpdb->prepare(
+                                "
+		SELECT $key
+		FROM $table
+		WHERe $whr = $type
+	", $where[$whr]));
     }
 
     function vars_in_db($key, $val, $key1, $val1, $table) {
@@ -485,27 +538,72 @@ class wpSuperPolls {
                       $key1=%d
 	", $val, $val1));
     }
-    
-    
-    function get_question_des($id){
-        
+
+    function get_question_des($id) {
+        global $wpdb;
+        $des = $wpdb->get_var($wpdb->prepare(
+                        "
+		SELECT `question`
+                FROM $this->table_que
+		WHERE parent_id=%d 
+                      
+	", $id));
+
+        return ($des) ? $des : '';
     }
-    
-    function get_option_des($poll_id, $opt_id ){
-        
+
+    function get_option_des($poll_id, $opt_id) {
+        global $wpdb;
+        return $wpdb->get_var(
+                        "
+                    select description
+                    from $this->table_opt
+                    where 
+                    ques_id = $poll_id
+                    and
+                    opt_id = $opt_id
+                 "
+        );
     }
-    
-    function get_options($poll_id){
-        
-        
+
+    //returns active options for the poll as an sorted array without keys
+    function get_active_options($poll_id) {
+        global $wpdb;
+        $db_opts = $wpdb->get_col($wpdb->prepare(
+                                "
+                    select opt_id 
+                    from $this->table_opt
+                    where ques_id = %d
+                ", $poll_id
+        ));
+
+        $cur_opts = array();
+        foreach ($db_opts as $value) {
+            $cur_opts[] = (int) $value;
+        }
+
+        sort($cur_opts);
+        return $cur_opts;
+    }
+
+    function delete_poll_option($post_id, $opt_id) {
+        global $wpdb;
+        return $wpdb->delete($this->table_opt, array('ques_id' => $post_id, 'opt_id' => $opt_id));
+
+        //delete related answers too
     }
 
     // ajax functions
     function ajax_remove_option() {
-        print_r($_POST);
-        echo $_POST;
+        global $wpdb;
+        $post_id = $_POST['post_id'];
+        $opt_id = (int) preg_replace("/[^0-9]/", "", $_POST['id']);
+        echo $this->delete_poll_option($post_id, $opt_id);
 
-        exit(1);
+
+
+
+        exit();
     }
 
 }

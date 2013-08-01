@@ -17,8 +17,17 @@ jQuery(document).ready(function($) {
 
         $('#add_poll_meta_box .hndle').hide();
         $('div#add_poll_meta_box').removeClass('postbox');
-        var to_show = +PollsAdminVars.options_to_show;
-        for (i = 1; i <= to_show; i++) {
+        var to_show = PollsAdminVars.options_to_show;
+        if(Object.prototype.toString.call( to_show ) === '[object Array]' && to_show.length >0){
+            for(i in to_show){
+               
+                $('#poll_option_div_' + to_show[i]).show();
+                
+            }
+        }
+        
+        else 
+        for (i = 1; i <= 2; i++) {
             $('#poll_option_div_' + i).show();
         }
 
@@ -74,7 +83,7 @@ jQuery(document).ready(function($) {
                 'post_id': post_id
             },
             success: function(data) {                
-                    //alert(data);
+                    alert(data);
                     self.parent().parent().fadeOut().remove();
                      //renumber the options
                     var i  = 0;
