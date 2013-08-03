@@ -14,4 +14,7 @@
 .poll_option_admin{
     display: none;
 }
+.poll_settings{
+    width: 100%;
+}
 

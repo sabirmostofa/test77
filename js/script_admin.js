@@ -4,6 +4,10 @@
  */
 
 jQuery(document).ready(function($) {
+
+    //settings function
+
+
     //Common functions
     function getURLParameter(name) {
         return decodeURI(
@@ -22,8 +26,31 @@ jQuery(document).ready(function($) {
     }
 
 
-        // codes for polls page
-        if (pagenow == 'wppolls') {
+    // codes for polls page
+    if (pagenow == 'wppolls') {
+
+        //add or hide color pickers
+        $('#poll_back_holder').farbtastic('#poll_set_back');
+        $('#poll_back_holder').hide();
+
+        $('#poll_border_holder').farbtastic('#poll_set_border_color');
+        $('#poll_border_holder').hide();
+
+        $('#poll_set_back').focus(function() {
+            $('#poll_back_holder').show();
+        })
+        $('#poll_set_back').focusout(function() {
+            $('#poll_back_holder').hide();
+        })
+
+        $('#poll_set_border_color').focus(function() {
+            $('#poll_border_holder').show();
+        })
+        
+        $('#poll_set_border_color').focusout(function() {
+            $('#poll_border_holder').hide();
+        })
+        $('#poll_set_date').datepicker();
 
         $('#add_poll_meta_box .hndle').hide();
         $('div#add_poll_meta_box').removeClass('postbox');
@@ -42,7 +69,7 @@ jQuery(document).ready(function($) {
             }
 
         $('#publish').click(function(evt) {
-            alert('check');
+            //alert('check');
             $('.wp-editor-area').each(function() {
                 //alert($(this).text());
             });
@@ -93,7 +120,7 @@ jQuery(document).ready(function($) {
                         'post_id': post_id
                     },
                     success: function(data) {
-                        delete_option(self);                     
+                        delete_option(self);
 
                     },
                     error: function(data) {
@@ -108,11 +135,12 @@ jQuery(document).ready(function($) {
 
         });// end of remove option
 
-    };//END OF POLLS PAGE
+    }
+    ;//END OF POLLS PAGE
 
 
 
 
-    
+
 });
 

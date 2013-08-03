@@ -33,6 +33,7 @@ class wpSuperPolls {
         $this->image_dir = plugins_url('/', __FILE__) . 'images/';
         add_action('init', array($this, 'add_custom_poll'));
         add_action('save_post', array($this, 'save_custom_poll'));
+        add_shortcode('super_poll', array($this, 'handle_shortcode'));
         add_action('before_delete_post', array($this, 'delete_poll_action'));
         add_action('admin_enqueue_scripts', array($this, 'admin_scripts'));
         add_action('wp_enqueue_scripts', array($this, 'front_scripts'));
@@ -46,12 +47,13 @@ class wpSuperPolls {
         // register_activation_hook(__FILE__, array($this, 'init_cron'));
         register_deactivation_hook(__FILE__, array($this, 'deactivation_tasks'));
     }
-    
+
     //creating sidebar menu in the admin size
     function CreateMenu() {
         add_submenu_page('options-general.php', 'Polls Settings', 'Polls Settings', 'activate_plugins', 'wpSuperPolls', array($this, 'OptionsPage'));
     }
-   // add an option page for the plugin
+
+    // add an option page for the plugin
     function OptionsPage() {
         include 'options-page.php';
     }
@@ -123,6 +125,8 @@ class wpSuperPolls {
 
 
         //insert options or update
+        update_post_meta($post_id, 'pol_set', $_POST['pol_set']);
+
         $key_ar = array_keys($_POST);
         $active_opts = array();
         foreach ($key_ar as $key) {
@@ -131,7 +135,7 @@ class wpSuperPolls {
                 $active_opts[] = $option_id;
 
                 //if exists update or insert
-                var_dump($option_id);
+                //var_dump($option_id);
 
 
                 if ($this->vars_in_db('ques_id', $post_id, 'opt_id', $option_id, $this->table_opt)) {
@@ -170,8 +174,8 @@ class wpSuperPolls {
         // exit;
         //remove the old ones
 
-        $db_opts = $this->get_active_options($post_id); 
-        var_dump($db_opts);
+        $db_opts = $this->get_active_options($post_id);
+        //var_dump($db_opts);
         $cur_opts = array();
         foreach ($active_opts as $value) {
             $cur_opts[] = (int) $value;
@@ -201,6 +205,17 @@ class wpSuperPolls {
         $wpdb->delete(
                 $this->table_opt, array('ques_id' => $postid)
         );
+    }
+
+    //handle shortcode
+    function handle_shortcode($atts) {
+        global $post;
+        $post_id = $post->ID;
+        $default_width = '200px';
+        extract(shortcode_atts(array(
+            'poll_id' => -1,
+            'width' => $default_width,
+                        ), $atts));
     }
 
     function polls_updated_messages($messages) {
@@ -234,6 +249,10 @@ class wpSuperPolls {
         add_meta_box(
                 $id = 'add_poll_meta_box', $title = __('Question'), $callback = array(&$this, 'render_poll_metabox'), $post_type = 'wppolls', $context = 'normal', $priority = 'high'
         );
+        add_meta_box(
+                $id = 'add_poll_settings_box', $title = __('Poll Settings'), $callback = array(&$this, 'render_settings_metabox'), $post_type = 'wppolls', $context = 'side'
+        );
+
         //add_meta_box(
         //      $id = 'page_description_meta_box', $title = __('Answers'), $callback = array(&$this, 'render_description_metabox'), $post_type = 'wppolls', $context = 'normal', $priority = 'high'
         // );
@@ -293,6 +312,10 @@ class wpSuperPolls {
 ';
     }
 
+    function render_settings_metabox($post) {
+        include 'poll_settings.php';
+    }
+
     //custom editor
     function content_editor_meta_box($post) {
         $settings = array(
@@ -343,18 +366,27 @@ class wpSuperPolls {
             //wp_register_style('wppl_bootstrap_css', plugins_url('/', __FILE__) . 'bootstrap/css/bootstrap.min.css', false, '1.0.0');
             //wp_enqueue_style('wppl_bootstrap_css');
 
+            wp_enqueue_script('wppl_admin_cpicker_script', plugins_url('/', __FILE__) . 'libs/farbtastic/farbtastic.min.js', array('jquery'));
+
+            wp_enqueue_script('jquery-ui-datepicker');
+            wp_enqueue_script('jquery-ui-core');
 
             wp_enqueue_script('wppl_admin_script', plugins_url('/', __FILE__) . 'js/script_admin.js');
+
+
             wp_register_style('wppl_admin_css', plugins_url('/', __FILE__) . 'css/style_admin.css', false, '1.0.0');
+            wp_register_style('wppl_admin_cpicker_css', plugins_url('/', __FILE__) . 'libs/farbtastic/farbtastic.css', false, '1.0.0');
+            wp_enqueue_style('wppl_jquuiry_ui', 'http://ajax.googleapis.com/ajax/libs/jqueryui/1.8.2/themes/smoothness/jquery-ui.css');
+            wp_enqueue_style('wppl_admin_cpicker_css');
             wp_enqueue_style('wppl_admin_css');
 
             //set javascript vars only if post varrs are available
-            if(isset($post)){
-            $params = array(
-                'options_to_show' => $this->options_to_show($post->ID),
-                'post_id' => $post->ID
-            );
-            wp_localize_script('wppl_admin_script', 'PollsAdminVars', $params);
+            if (isset($post)) {
+                $params = array(
+                    'options_to_show' => $this->options_to_show($post->ID),
+                    'post_id' => $post->ID
+                );
+                wp_localize_script('wppl_admin_script', 'PollsAdminVars', $params);
             }
         }
     }
@@ -486,7 +518,6 @@ class wpSuperPolls {
         }
     }
 
-    
     function not_inserted_before($id, $city) {
         global $wpdb;
         $in = $wpdb->get_var("select post_id from $this->table_data where cg_id=$id and city_id=$city");
@@ -524,6 +555,7 @@ class wpSuperPolls {
 		WHERE $key=%d
 	", $val));
     }
+
     //return a value based on a key in a table
     function var_in_db($key, $table, $where = array(), $type = '%d') {
         global $wpdb;
@@ -583,7 +615,7 @@ class wpSuperPolls {
     function get_active_options($poll_id) {
         global $wpdb;
         $db_opts = $wpdb->get_col($wpdb->prepare(
-                                "
+                        "
                     select opt_id 
                     from $this->table_opt
                     where ques_id = %d
@@ -609,7 +641,7 @@ class wpSuperPolls {
 
     // ajax functions
     function ajax_remove_option() {
-        
+
         $post_id = $_POST['post_id'];
         $opt_id = (int) preg_replace("/[^0-9]/", "", $_POST['id']);
         echo $this->delete_poll_option($post_id, $opt_id);

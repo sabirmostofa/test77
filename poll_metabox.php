@@ -43,6 +43,15 @@ if ($action == 'add')
     
 //var_dump($cur_opts);
 ?>
+<p style="text-align: center"><span style = "float: left;padding-top: 5px;margin-right:10px" > Poll Shortcode: </span>
+
+<input type="text" style="width:80%;border:2px black solid;display: block;padding:4px;margin:4px;text-align: center " name="" value='[super_poll poll_id="<?php echo $post_id; ?>" width="default" ]' readonly="readonly" onclick="select()" />
+</p>
+<!--<p  style="border:2px black solid;display: block;padding:4px;margin:4px;text-align: center " >
+    [super_poll poll_id="<?php echo $post_id; ?>" width="default" ] 
+</p>-->
+<div style="clear:both"></div>
+
 <h3>Question</h3>
 
 <?php
