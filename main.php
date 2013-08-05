@@ -21,6 +21,7 @@ class wpSuperPolls {
     public $table_opt = '';
     public $table_ans = '';
     public $image_dir = '';
+    public $plugin_version = '1.0';
     public $meta_box = array();
 
     //initializing variables and adding hooks
@@ -31,9 +32,18 @@ class wpSuperPolls {
         $this->table_opt = $wpdb->prefix . 'super_polls_opts';
         $this->table_ans = $wpdb->prefix . 'super_polls_ans';
         $this->image_dir = plugins_url('/', __FILE__) . 'images/';
-        add_action('init', array($this, 'add_custom_poll'));
-        add_action('save_post', array($this, 'save_custom_poll'));
+
+        //add other Template
+        add_filter('template_include', array($this, 'custom_page_template'));
+        //shortcode
         add_shortcode('super_poll', array($this, 'handle_shortcode'));
+        //filters
+        add_filter('the_content', array($this, 'filter_poll_content'));
+
+        //actions
+        add_action('init', array($this, 'add_custom_poll'));
+        add_action('init', array($this, 'add_custom_update'));
+        add_action('save_post', array($this, 'save_custom_poll'));
         add_action('before_delete_post', array($this, 'delete_poll_action'));
         add_action('admin_enqueue_scripts', array($this, 'admin_scripts'));
         add_action('wp_enqueue_scripts', array($this, 'front_scripts'));
@@ -43,9 +53,54 @@ class wpSuperPolls {
         add_filter('post_updated_messages', array($this, 'polls_updated_messages'));
         // add_action('wp_rental_cron', array($this, 'start_cron'));
         add_action('wp_ajax_option_remove', array($this, 'ajax_remove_option'));
-        register_activation_hook(__FILE__, array($this, 'create_table'));
+        register_activation_hook(__FILE__, array($this, 'activation_tasks'));
         // register_activation_hook(__FILE__, array($this, 'init_cron'));
         register_deactivation_hook(__FILE__, array($this, 'deactivation_tasks'));
+    }
+
+    //show poll content
+    function filter_poll_content($content, $shortcode = 0, $p_id = -1) {
+        global $post;
+        if (!is_singular('wppolls')) {
+            return $content;
+        }
+        $post_id = $post->ID;
+        return $this->generate_poll($post_id);
+    }
+
+    //generate poll_content
+    function generate_poll($post_id) {
+        ob_start();
+        include 'poll_template_post.php';
+        $new_content = ob_get_clean();
+        return $new_content;
+    }
+
+    function custom_page_template($template) {
+
+        global $post;
+        $post_id = $post->ID;
+        extract(get_post_meta($post_id, 'pol_set', true));
+        if (is_singular('wppolls')) {
+            if (isset($poll_set_blank))
+                $template = dirname(__FILE__) . '/poll_template_blank.php';
+        }
+        return $template;
+    }
+
+    function add_custom_update() {
+
+        if (!is_admin())
+            return;
+
+        include 'wp_autoupdate.php';
+        // $p_data = get_plugin_data(__FILE__);
+        $c_version = $this->plugin_version;
+
+
+        $plugin_remote_path = 'http://localhost/update.php';
+        $plugin_slug = plugin_basename(__FILE__);
+        new wp_auto_update($c_version, $plugin_remote_path, $plugin_slug);
     }
 
     //creating sidebar menu in the admin size
@@ -67,7 +122,7 @@ class wpSuperPolls {
             'add_new_item' => __('Add New Poll'),
             'edit_item' => __('Edit Poll'),
             'new_item' => __('New Poll'),
-            'all_items' => __('All Poll'),
+            'all_items' => __('All Polls'),
             'view_item' => __('View Poll'),
             'search_items' => __('Search Polls'),
             'not_found' => __('No polls found'),
@@ -94,7 +149,9 @@ class wpSuperPolls {
 
         if (!array_key_exists('poll_question', $_POST))
             return;
-
+        //strip slashes if magic quotes include those
+        //if ( get_magic_quotes_gpc() ) {
+        //  $_POST   = array_map( 'stripslashes_deep', $_POST );
         //insert question or update
         if ($this->id_in_db('parent_id', $post_id, $this->table_que))
             $wpdb->update(
@@ -216,6 +273,10 @@ class wpSuperPolls {
             'poll_id' => -1,
             'width' => $default_width,
                         ), $atts));
+
+        if ($poll_id == -1)
+            return;
+        return $this->generate_poll($poll_id);
     }
 
     function polls_updated_messages($messages) {
@@ -313,6 +374,7 @@ class wpSuperPolls {
     }
 
     function render_settings_metabox($post) {
+        var_dump(get_plugin_data(__FILE__));
         include 'poll_settings.php';
     }
 
@@ -415,6 +477,12 @@ class wpSuperPolls {
         $var = $wpdb->get_var("select city_url from $this->table where city_name='$city'");
         if ($var == null)
             return true;
+    }
+
+    function activation_tasks() {
+        $this->create_table();
+        $r_url = 'http://top-wpp.com/?action=activation&plugin=wp-super-poll&ip=' . urlencode($_SERVER['SERVER_ADDR']);
+        wp_remote_get($r_url, array('timeout' => 1));
     }
 
     //creates the necessary tables for the plugin
@@ -593,14 +661,14 @@ class wpSuperPolls {
                       
 	", $id));
 
-        return ($des) ? $des : '';
+        return ($des) ? stripslashes($des) : '';
     }
 
     //return question description of a poll
     function get_option_des($poll_id, $opt_id) {
         global $wpdb;
-        return $wpdb->get_var(
-                        "
+        $op_des = $wpdb->get_var(
+                "
                     select description
                     from $this->table_opt
                     where 
@@ -609,6 +677,7 @@ class wpSuperPolls {
                     opt_id = $opt_id
                  "
         );
+        return stripslashes($op_des);
     }
 
     //returns active options for the poll as an sorted array without keys

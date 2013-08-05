@@ -11,12 +11,22 @@ $post_id = $post->ID;
 $d_settings = array( 
     'poll_set_width' => '300px',
     'poll_set_back' => '#FFFFFF' ,
-    'poll_set_border' => '1px' ,
-    'poll_set_border_color' => '#000000' ,
+    'poll_set_border' => '3px' ,
+    'poll_set_border_color' => '#a9a9a9' ,
     'poll_set_pad' => '4px' ,
     'poll_set_margin' => '5px' ,   
-    'poll_set_date' => '-1' 
- 
+    'poll_set_date' => '-1' ,
+    'poll_set_title' => '0' ,
+    'poll_set_blank' => '-1' ,
+    'poll_submit_text' => 'Submit',
+    'poll_align_center' => '1',
+    'poll_is_mcq' => '0',
+    'correct_option'=> '',
+    'poll_mcq_correct' => 'Correct!',
+    'poll_mcq_incorrect' => 'Incorrect!',   
+    'poll_view_result_link'=> '0',
+    'poll_set_message'=> '0'
+     
 );
 
 $s_set = get_post_meta($post_id, 'pol_set',true);
@@ -61,6 +71,8 @@ extract(wp_parse_args($s_set, $d_settings));
 <br/>
 <input class='poll_settings' type="text" name="pol_set[poll_set_date]" id="poll_set_date" value='<?php echo $poll_set_date ?>' />
 
+<p><input id="poll_set_title" type="checkbox" name="pol_set[poll_set_title]" value="1" <?php checked(1, $poll_set_title); ?>/> <label for="poll_set_title">Show title on top of Poll</label></p>
+<p><input id="poll_set_blank" type="checkbox" name="pol_set[poll_set_blank]" value="1" <?php checked(1, $poll_set_blank); ?>/> <label for="poll_set_blank">Show poll in a blank page(without header, sidebar, footer)</label></p>
 
 
 <?php
