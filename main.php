@@ -53,6 +53,8 @@ class wpSuperPolls {
         add_filter('post_updated_messages', array($this, 'polls_updated_messages'));
         // add_action('wp_rental_cron', array($this, 'start_cron'));
         add_action('wp_ajax_option_remove', array($this, 'ajax_remove_option'));
+        add_action('wp_ajax_poll_submit_result', array($this, 'ajax_poll_submit'));
+        add_action('wp_ajax_nopriv_poll_submit_result', array($this, 'ajax_poll_submit'));
         register_activation_hook(__FILE__, array($this, 'activation_tasks'));
         // register_activation_hook(__FILE__, array($this, 'init_cron'));
         register_deactivation_hook(__FILE__, array($this, 'deactivation_tasks'));
@@ -77,7 +79,9 @@ class wpSuperPolls {
     }
 
     function custom_page_template($template) {
-
+        if( !get_post_meta($post_id, 'pol_set', true)  )
+                return $template;
+       
         global $post;
         $post_id = $post->ID;
         extract(get_post_meta($post_id, 'pol_set', true));
@@ -456,13 +460,26 @@ class wpSuperPolls {
     //add javascript for the front side
     function front_scripts() {
         global $post;
-        if (is_page() || is_single()) {
-            wp_enqueue_script('jquery');
-            if (!(is_admin())) {
+        $ip = $_SERVER['REMOTE_ADDR'];
+       $info = $this->getBrowser();
+       $browser_name = $info['name'];
+       $platform_name = $info['platform'];
+            
+            if (!(is_admin())) { 
+                wp_enqueue_script('jquery');
                 // wp_enqueue_script('wpvr_boxy_script', plugins_url('/' , __FILE__).'js/boxy/src/javascripts/jquery.boxy.js');
+                wp_enqueue_script('wpp_front_jcookie', plugins_url('/', __FILE__) . 'js/jquery-cookie.js');
+                wp_enqueue_script('wpp_front_json2', plugins_url('/', __FILE__) . 'js/json2.js');
                 wp_enqueue_script('wpp_front_script', plugins_url('/', __FILE__) . 'js/script_front.js');
+                wp_localize_script( 'wpp_front_script', 'PollsFrontVars', array( 
+                    'ajaxurl' => admin_url( 'admin-ajax.php' ),
+                    'ip'=> $ip,
+                    'browser' => $browser_name,
+                    'platform' => $platform_name
+                    ) );
+                
             }
-        }
+        
     }
 
     //add css to the front side
@@ -525,6 +542,92 @@ class wpSuperPolls {
         dbDelta($sql1);
         dbDelta($sql2);
     }
+    
+    //get browser info
+    function getBrowser(){ 
+    $u_agent = $_SERVER['HTTP_USER_AGENT']; 
+    $bname = 'Unknown';
+    $platform = 'Unknown';
+    $version= "";
+
+    //First get the platform?
+    if (preg_match('/linux/i', $u_agent)) {
+        $platform = 'linux';
+    }
+    elseif (preg_match('/macintosh|mac os x/i', $u_agent)) {
+        $platform = 'mac';
+    }
+    elseif (preg_match('/windows|win32/i', $u_agent)) {
+        $platform = 'windows';
+    }
+    
+    // Next get the name of the useragent yes seperately and for good reason
+    if(preg_match('/MSIE/i',$u_agent) && !preg_match('/Opera/i',$u_agent)) 
+    { 
+        $bname = 'Internet Explorer'; 
+        $ub = "MSIE"; 
+    } 
+    elseif(preg_match('/Firefox/i',$u_agent)) 
+    { 
+        $bname = 'Mozilla Firefox'; 
+        $ub = "Firefox"; 
+    } 
+    elseif(preg_match('/Chrome/i',$u_agent)) 
+    { 
+        $bname = 'Google Chrome'; 
+        $ub = "Chrome"; 
+    } 
+    elseif(preg_match('/Safari/i',$u_agent)) 
+    { 
+        $bname = 'Apple Safari'; 
+        $ub = "Safari"; 
+    } 
+    elseif(preg_match('/Opera/i',$u_agent)) 
+    { 
+        $bname = 'Opera'; 
+        $ub = "Opera"; 
+    } 
+    elseif(preg_match('/Netscape/i',$u_agent)) 
+    { 
+        $bname = 'Netscape'; 
+        $ub = "Netscape"; 
+    } 
+    
+    // finally get the correct version number
+    $known = array('Version', $ub, 'other');
+    $pattern = '#(?<browser>' . join('|', $known) .
+    ')[/ ]+(?<version>[0-9.|a-zA-Z.]*)#';
+    if (!preg_match_all($pattern, $u_agent, $matches)) {
+        // we have no matching number just continue
+    }
+    
+    // see how many we have
+    $i = count($matches['browser']);
+    if ($i != 1) {
+        //we will have two since we are not using 'other' argument yet
+        //see if version is before or after the name
+        if (strripos($u_agent,"Version") < strripos($u_agent,$ub)){
+            $version= $matches['version'][0];
+        }
+        else {
+            $version= $matches['version'][1];
+        }
+    }
+    else {
+        $version= $matches['version'][0];
+    }
+    
+    // check if we have a number
+    if ($version==null || $version=="") {$version="?";}
+    
+    return array(
+        'userAgent' => $u_agent,
+        'name'      => $bname,
+        'version'   => $version,
+        'platform'  => $platform,
+        'pattern'    => $pattern
+    );
+} 
 
 // end of create_table
     //create table for geolocation
@@ -710,11 +813,17 @@ class wpSuperPolls {
 
     // ajax functions
     function ajax_remove_option() {
-
         $post_id = $_POST['post_id'];
         $opt_id = (int) preg_replace("/[^0-9]/", "", $_POST['id']);
         echo $this->delete_poll_option($post_id, $opt_id);
         exit();
+    }
+    
+    
+    function ajax_poll_submit(){
+        echo 'hur';
+        exit("fdf");
+        
     }
 
 }

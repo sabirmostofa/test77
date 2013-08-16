@@ -52,7 +52,7 @@ $poll_opts = $this->get_active_options($post_id);
             ?>
             <tr>
             <td>
-            <input type="radio" name="poll-<?php echo $post_id; ?>" id="" class="poll_option" /> 
+            <input type="radio" name="poll-<?php echo $post_id; ?>" value="<?php echo $op; ?>" class="poll_option" /> 
             </td>
             <td>
             <?php echo $opt_des; ?>
@@ -62,6 +62,7 @@ $poll_opts = $this->get_active_options($post_id);
         
     </table>
     <div style="text-align:center">
+        <input type="hidden" class="poll_id" name="" value="<?php echo $post_id ?>" />
     <button class="poll_submit" style="text-align">Submit</button>
     </div>
 </div>

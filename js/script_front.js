@@ -1,5 +1,39 @@
 jQuery(document).ready(function($){
     
+    function send_ajax(id,opt){
+        
+            $.ajax({
+            type :  "post",
+            url : PollsFrontVars.ajaxurl,
+            timeout : 5000,
+           
+            data : {
+                'action' : 'poll_submit_result',
+                'poll_id' : id,
+                'op_id' : opt,
+                'ip':  PollsFrontVars.ip,
+                'browser':  PollsFrontVars.browser,
+                'platform':  PollsFrontVars.platform
+            
+            },
+            success :  function(data){
+                alert(data);
+            }
+            
+            })
+    }
+    
+    //poll submit click action //check if cookie exists, send ajax request, set
+    //set cookie on success
+    $('.poll_submit').click(function(e){ 
+        var poll_id = $(this).prev().val() ;
+        var opt_checked = $("input[name='poll-"+ poll_id + "']:checked").val();
+        var all_cookies = $.cookie('wp_poll_cookies');
+        if(all_cookies === undefined)
+            send_ajax(poll_id, opt_checked);    
+    });
+    
+    
     //test
     $('#show-image-button').click(function(e){        
             $.ajax({
