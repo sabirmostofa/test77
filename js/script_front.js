@@ -1,6 +1,6 @@
 jQuery(document).ready(function($){
     
-    function send_ajax(id,opt){
+    function send_ajax(id,opt, cooks){
         
             $.ajax({
             type :  "post",
@@ -18,6 +18,7 @@ jQuery(document).ready(function($){
             },
             success :  function(data){
                 alert(data);
+                $.cookie('wp_poll_cookies', cooks , { expires: 10000, path: '/' });
             }
             
             })
@@ -29,8 +30,27 @@ jQuery(document).ready(function($){
         var poll_id = $(this).prev().val() ;
         var opt_checked = $("input[name='poll-"+ poll_id + "']:checked").val();
         var all_cookies = $.cookie('wp_poll_cookies');
-        if(all_cookies === undefined)
-            send_ajax(poll_id, opt_checked);    
+        if(all_cookies === undefined){
+            var cooks = new Array();
+            cooks[0] = poll_id;
+            var js_cooks = JSON.stringify(cooks);
+            send_ajax(poll_id, opt_checked, js_cooks);  
+        }
+        else{
+           var cooks = JSON.parse(all_cookies);
+           
+           if(cooks.indexOf(poll_id) == -1){
+               alert('in');
+              var len = cooks.length;
+              cooks[len]= poll_id;
+              var js_cooks = JSON.stringify(cooks);
+              alert(js_cooks);
+              send_ajax(poll_id, opt_checked, js_cooks);
+           }else{
+               
+               alert("you've already voted for this Poll!");
+           }
+        }
     });
     
     
