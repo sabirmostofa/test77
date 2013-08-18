@@ -35,7 +35,7 @@ class wpSuperPolls {
         $this->table_opt = $wpdb->prefix . 'super_polls_opts';
         $this->table_ans = $wpdb->prefix . 'super_polls_ans';
         $this->image_dir = plugins_url('/', __FILE__) . 'images/';
-        $this -> db_file =  dirname(__FILE__) . '/helpers/database/ip2country.db' ;
+        $this->db_file = dirname(__FILE__) . '/helpers/database/ip2country.db';
 
         //add other Template
         add_filter('template_include', array($this, 'custom_page_template'));
@@ -466,7 +466,7 @@ class wpSuperPolls {
     //add javascript for the front side
     function front_scripts() {
         global $post;
-        $_SERVER["REMOTE_ADDR"] = $this -> determineIP();
+        $_SERVER["REMOTE_ADDR"] = $this->determineIP();
         $ip = $_SERVER['REMOTE_ADDR'];
         $info = $this->getBrowser();
         $browser_name = $info['name'];
@@ -624,7 +624,7 @@ class wpSuperPolls {
 
 // end of create_table
     //create table for geolocation
-     function update_db() {
+    function update_db() {
 
 
         global $wpdb;
@@ -816,21 +816,21 @@ class wpSuperPolls {
         global $wpdb;
         $wpdb->show_errors();
         $poll_id = $_POST['poll_id'];
-        $s_set = get_post_meta($poll_id, 'pol_set',true);
+        $s_set = get_post_meta($poll_id, 'pol_set', true);
         $end_date = $s_set['poll_set_date'];
-        
-       
-    
-        if(stripos($end_date, '/') !== false ){
-            if( strtotime($end_date) < strtotime('now')){
-               
+
+
+
+        if (stripos($end_date, '/') !== false) {
+            if (strtotime($end_date) < strtotime('now')) {
+
                 exit('end');
             }
         }
-                
+
         $op_id = $_POST['op_id'];
         $ip = $_POST['ip'];
-       
+
         $browser = $_POST['browser'];
         $platform = $_POST['platform'];
         $is_user = ( is_user_logged_in() ) ? 1 : 0;
@@ -855,114 +855,172 @@ class wpSuperPolls {
             '%s'
                 )
         );
-         //$wpdb->print_error();
+        //$wpdb->print_error();
         exit();
     }
-    
+
     //
     /* By Grant Burton @ BURTONTECH.COM (11-30-2008): IP-Proxy-Cluster Fix */
-function checkIP($ip) {
-   if (!empty($ip) && ip2long($ip)!=-1 && ip2long($ip)!=false) {
-       $private_ips = array (
-       array('0.0.0.0','2.255.255.255'),
-       array('10.0.0.0','10.255.255.255'),
-       array('127.0.0.0','127.255.255.255'),
-       array('169.254.0.0','169.254.255.255'),
-       array('172.16.0.0','172.31.255.255'),
-       array('192.0.2.0','192.0.2.255'),
-       array('192.168.0.0','192.168.255.255'),
-       array('255.255.255.0','255.255.255.255')
-       );
+    function checkIP($ip) {
+        if (!empty($ip) && ip2long($ip) != -1 && ip2long($ip) != false) {
+            $private_ips = array(
+                array('0.0.0.0', '2.255.255.255'),
+                array('10.0.0.0', '10.255.255.255'),
+                array('127.0.0.0', '127.255.255.255'),
+                array('169.254.0.0', '169.254.255.255'),
+                array('172.16.0.0', '172.31.255.255'),
+                array('192.0.2.0', '192.0.2.255'),
+                array('192.168.0.0', '192.168.255.255'),
+                array('255.255.255.0', '255.255.255.255')
+            );
 
-       foreach ($private_ips as $r) {
-           $min = ip2long($r[0]);
-           $max = ip2long($r[1]);
-           if ((ip2long($ip) >= $min) && (ip2long($ip) <= $max)) return false;
-       }
-       return true;
-   } else { 
-       return false;
-   }
-}
+            foreach ($private_ips as $r) {
+                $min = ip2long($r[0]);
+                $max = ip2long($r[1]);
+                if ((ip2long($ip) >= $min) && (ip2long($ip) <= $max))
+                    return false;
+            }
+            return true;
+        } else {
+            return false;
+        }
+    }
 
-function determineIP() {
-   if ( $this-> checkIP($_SERVER["HTTP_CLIENT_IP"])) {
-       return $_SERVER["HTTP_CLIENT_IP"];
-   }
-   foreach (explode(",",$_SERVER["HTTP_X_FORWARDED_FOR"]) as $ip) {
-       if ( $this-> checkIP(trim($ip))) {
-           return $ip;
-       }
-   }
-   if ($this-> checkIP($_SERVER["HTTP_X_FORWARDED"])) {
-       return $_SERVER["HTTP_X_FORWARDED"];
-   } elseif ($this-> checkIP($_SERVER["HTTP_X_CLUSTER_CLIENT_IP"])) {
-       return $_SERVER["HTTP_X_CLUSTER_CLIENT_IP"];
-   } elseif ($this-> checkIP($_SERVER["HTTP_FORWARDED_FOR"])) {
-       return $_SERVER["HTTP_FORWARDED_FOR"];
-   } elseif ($this-> checkIP($_SERVER["HTTP_FORWARDED"])) {
-       return $_SERVER["HTTP_FORWARDED"];
-   } else {
-       return $_SERVER["REMOTE_ADDR"];
-   }
-}
+    function determineIP() {
+        if ($this->checkIP($_SERVER["HTTP_CLIENT_IP"])) {
+            return $_SERVER["HTTP_CLIENT_IP"];
+        }
+        foreach (explode(",", $_SERVER["HTTP_X_FORWARDED_FOR"]) as $ip) {
+            if ($this->checkIP(trim($ip))) {
+                return $ip;
+            }
+        }
+        if ($this->checkIP($_SERVER["HTTP_X_FORWARDED"])) {
+            return $_SERVER["HTTP_X_FORWARDED"];
+        } elseif ($this->checkIP($_SERVER["HTTP_X_CLUSTER_CLIENT_IP"])) {
+            return $_SERVER["HTTP_X_CLUSTER_CLIENT_IP"];
+        } elseif ($this->checkIP($_SERVER["HTTP_FORWARDED_FOR"])) {
+            return $_SERVER["HTTP_FORWARDED_FOR"];
+        } elseif ($this->checkIP($_SERVER["HTTP_FORWARDED"])) {
+            return $_SERVER["HTTP_FORWARDED"];
+        } else {
+            return $_SERVER["REMOTE_ADDR"];
+        }
+    }
 
 //generate chart contents function 
 // functions return the datas as a key value array in percentage
 
-function get_country($ip){
-       $ip_ranges_table_name = $wpdb->prefix . self::ip_ranges_table_suffix;
+    function get_country($ip) {
+        global $wpdb;
+        $ip_ranges_table_name = $wpdb->prefix . self::ip_ranges_table_suffix;
         $countries_table_name = $wpdb->prefix . self::countries_table_suffix;
-       $val = $wpdb->get_var(
-            '
+        $val = $wpdb->get_var(
+                '
                 SELECT                 
                     name                 
-                FROM '.$countries_table_name.'
-                INNER JOIN '.$ip_ranges_table_name.'
+                FROM ' . $countries_table_name . '
+                INNER JOIN ' . $ip_ranges_table_name . '
                     USING(cid)
-                WHERE '.sprintf("%u", ip2long($ip)).'
+                WHERE ' . sprintf("%u", ip2long($ip)) . '
                     BETWEEN fromip AND toip
                     '
-                
-            
-            );
-    return $val;
-    
-}
+        );
+        return $val;
+    }
 
-function get_countries($poll_id){
-    global $wpdb;
-    
-    
-        $ips=$wpdb->get_col( $wpdb->prepare( 
-	"
+    function get_countries($poll_id) {
+        global $wpdb;
+        $ar = array();
+
+        $ips = $wpdb->get_col($wpdb->prepare(
+                        "
 	SELECT      ip
 	FROM        $this->table_ans
 	WHERE       ques_id = %d 
 	           
-	",
-	$poll_id 
-	
-        )); 
-   
+	", $poll_id
+        ));
         
- 
-}
+        $count = 0;
+        foreach($ips as $ip){
+           $co = $this ->get_country($ip);
+           if($co){
+               $count ++;
+               if(array_key_exists($co, $ar))
+                    $ar[$co] +=1;
+               else 
+                   $ar[$co] =1;
+           }
+                    
+        }
+        
+        foreach($ar as $co => $elem){
+            $ar[$co] = round(($elem/$count)*100, 2);
+        }
+        
+             
+        return $ar;
+    }
 
-function get_browsers($poll_id){
-    
-    
-}
+    function get_browsers($poll_id) {
+        
+    }
 
-function get_ops($poll_id){
-    
-    
-}
+    function get_ops($poll_id) {
+        
+    }
 
-function get_usrs($poll_id){
+    function get_usrs($poll_id) {
+        
+    }
     
-}
+    function output_javascript($container, $name , $data){
+        ?>
+        <script type="text/javascript">
+         jQuery(function ($) {
+    $('<?php echo $container ?>').highcharts({
+        chart: {
+            plotBackgroundColor: null,
+            plotBorderWidth: null,
+            plotShadow: false
+        },
+        title: {
+            text: '<?php echo $name ?>'
+        },
+        tooltip: {
+    	    pointFormat: '{series.name}: <b>{point.percentage:.1f}%</b>'
+        },
+        plotOptions: {
+            pie: {
+                allowPointSelect: true,
+                cursor: 'pointer',
+                dataLabels: {
+                    enabled: true,
+                    color: '#000000',
+                    connectorColor: '#000000',
+                    format: '<b>{point.name}</b>: {point.percentage:.1f} %'
+                }
+            }
+        },
+        series: [{
+            type: 'pie',
+            name: '<?php echo $name ?>',
+            data: [
+           <?php foreach($data as $k=>$v): 
+                echo  "['$k', $v],";
+               ?>
+                   
+                   <?php endforeach; ?>
+            ]
+        }]
+    });
+});
 
-
+          
+    </script>
+<?php     
+        
+    }
 
 }
