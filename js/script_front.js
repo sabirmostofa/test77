@@ -17,6 +17,10 @@ jQuery(document).ready(function($){
             
             },
             success :  function(data){
+                if(data == 'end'){
+                    alert('Poll submission is over');
+                    return;
+                }
                 alert(data);
                 $.cookie('wp_poll_cookies', cooks , { expires: 10000, path: '/' });
             }

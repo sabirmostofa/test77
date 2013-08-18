@@ -15,7 +15,9 @@ $wpSuperPolls = new wpSuperPolls();
 class wpSuperPolls {
 
     const ip_ranges_table_suffix = 'polls_ip_ranges';
+    const countries_table_suffix = 'polls_countries';
     const db_filename = 'ip2country.db';
+    const slug = 'super-poll';
 
     public $table_que = '';
     public $table_opt = '';
@@ -23,6 +25,7 @@ class wpSuperPolls {
     public $image_dir = '';
     public $plugin_version = '1.0';
     public $meta_box = array();
+    public $db_file = '';
 
     //initializing variables and adding hooks
     function __construct() {
@@ -32,6 +35,7 @@ class wpSuperPolls {
         $this->table_opt = $wpdb->prefix . 'super_polls_opts';
         $this->table_ans = $wpdb->prefix . 'super_polls_ans';
         $this->image_dir = plugins_url('/', __FILE__) . 'images/';
+        $this -> db_file =  dirname(__FILE__) . '/helpers/database/ip2country.db' ;
 
         //add other Template
         add_filter('template_include', array($this, 'custom_page_template'));
@@ -433,9 +437,11 @@ class wpSuperPolls {
             //wp_enqueue_style('wppl_bootstrap_css');
 
             wp_enqueue_script('wppl_admin_cpicker_script', plugins_url('/', __FILE__) . 'libs/farbtastic/farbtastic.min.js', array('jquery'));
+            wp_enqueue_script('wppl_admin_chart', 'http://code.highcharts.com/highcharts.js', array('jquery'));
 
             wp_enqueue_script('jquery-ui-datepicker');
             wp_enqueue_script('jquery-ui-core');
+            wp_enqueue_script('jquery-ui-tabs');
 
             wp_enqueue_script('wppl_admin_script', plugins_url('/', __FILE__) . 'js/script_admin.js');
 
@@ -460,6 +466,7 @@ class wpSuperPolls {
     //add javascript for the front side
     function front_scripts() {
         global $post;
+        $_SERVER["REMOTE_ADDR"] = $this -> determineIP();
         $ip = $_SERVER['REMOTE_ADDR'];
         $info = $this->getBrowser();
         $browser_name = $info['name'];
@@ -496,6 +503,7 @@ class wpSuperPolls {
 
     function activation_tasks() {
         $this->create_table();
+        $this->update_db();
         $r_url = 'http://top-wpp.com/?action=activation&plugin=wp-super-poll&ip=' . urlencode($_SERVER['SERVER_ADDR']);
         wp_remote_get($r_url, array('timeout' => 1));
     }
@@ -616,7 +624,7 @@ class wpSuperPolls {
 
 // end of create_table
     //create table for geolocation
-    protected function update_db() {
+     function update_db() {
 
 
         global $wpdb;
@@ -643,7 +651,7 @@ class wpSuperPolls {
         dbDelta($sql_countries);
         dbDelta($sql_ip_ranges);
 
-        require_once(dirname(__FILE__) . '/iso-3166-2.php');
+        require_once(dirname(__FILE__) . '/helpers/iso-3166-2.php');
 
         $sql = '';
         foreach ($country_data as $code => $code_data) {
@@ -808,6 +816,18 @@ class wpSuperPolls {
         global $wpdb;
         $wpdb->show_errors();
         $poll_id = $_POST['poll_id'];
+        $s_set = get_post_meta($poll_id, 'pol_set',true);
+        $end_date = $s_set['poll_set_date'];
+        
+       
+    
+        if(stripos($end_date, '/') !== false ){
+            if( strtotime($end_date) < strtotime('now')){
+               
+                exit('end');
+            }
+        }
+                
         $op_id = $_POST['op_id'];
         $ip = $_POST['ip'];
        
@@ -835,8 +855,114 @@ class wpSuperPolls {
             '%s'
                 )
         );
-         $wpdb->print_error();
+         //$wpdb->print_error();
         exit();
     }
+    
+    //
+    /* By Grant Burton @ BURTONTECH.COM (11-30-2008): IP-Proxy-Cluster Fix */
+function checkIP($ip) {
+   if (!empty($ip) && ip2long($ip)!=-1 && ip2long($ip)!=false) {
+       $private_ips = array (
+       array('0.0.0.0','2.255.255.255'),
+       array('10.0.0.0','10.255.255.255'),
+       array('127.0.0.0','127.255.255.255'),
+       array('169.254.0.0','169.254.255.255'),
+       array('172.16.0.0','172.31.255.255'),
+       array('192.0.2.0','192.0.2.255'),
+       array('192.168.0.0','192.168.255.255'),
+       array('255.255.255.0','255.255.255.255')
+       );
+
+       foreach ($private_ips as $r) {
+           $min = ip2long($r[0]);
+           $max = ip2long($r[1]);
+           if ((ip2long($ip) >= $min) && (ip2long($ip) <= $max)) return false;
+       }
+       return true;
+   } else { 
+       return false;
+   }
+}
+
+function determineIP() {
+   if ( $this-> checkIP($_SERVER["HTTP_CLIENT_IP"])) {
+       return $_SERVER["HTTP_CLIENT_IP"];
+   }
+   foreach (explode(",",$_SERVER["HTTP_X_FORWARDED_FOR"]) as $ip) {
+       if ( $this-> checkIP(trim($ip))) {
+           return $ip;
+       }
+   }
+   if ($this-> checkIP($_SERVER["HTTP_X_FORWARDED"])) {
+       return $_SERVER["HTTP_X_FORWARDED"];
+   } elseif ($this-> checkIP($_SERVER["HTTP_X_CLUSTER_CLIENT_IP"])) {
+       return $_SERVER["HTTP_X_CLUSTER_CLIENT_IP"];
+   } elseif ($this-> checkIP($_SERVER["HTTP_FORWARDED_FOR"])) {
+       return $_SERVER["HTTP_FORWARDED_FOR"];
+   } elseif ($this-> checkIP($_SERVER["HTTP_FORWARDED"])) {
+       return $_SERVER["HTTP_FORWARDED"];
+   } else {
+       return $_SERVER["REMOTE_ADDR"];
+   }
+}
+
+//generate chart contents function 
+// functions return the datas as a key value array in percentage
+
+function get_country($ip){
+       $ip_ranges_table_name = $wpdb->prefix . self::ip_ranges_table_suffix;
+        $countries_table_name = $wpdb->prefix . self::countries_table_suffix;
+       $val = $wpdb->get_var(
+            '
+                SELECT                 
+                    name                 
+                FROM '.$countries_table_name.'
+                INNER JOIN '.$ip_ranges_table_name.'
+                    USING(cid)
+                WHERE '.sprintf("%u", ip2long($ip)).'
+                    BETWEEN fromip AND toip
+                    '
+                
+            
+            );
+    return $val;
+    
+}
+
+function get_countries($poll_id){
+    global $wpdb;
+    
+    
+        $ips=$wpdb->get_col( $wpdb->prepare( 
+	"
+	SELECT      ip
+	FROM        $this->table_ans
+	WHERE       ques_id = %d 
+	           
+	",
+	$poll_id 
+	
+        )); 
+   
+        
+ 
+}
+
+function get_browsers($poll_id){
+    
+    
+}
+
+function get_ops($poll_id){
+    
+    
+}
+
+function get_usrs($poll_id){
+    
+}
+
+
 
 }

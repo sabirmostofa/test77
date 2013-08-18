@@ -101,5 +101,8 @@ if ($action == 'add') {
 <br/>
 <a title="Add a new option" href="#" id="add_option" class="button-primary">Add option</a>
 
+<?php
+include 'poll_results.php';
+
 
 
