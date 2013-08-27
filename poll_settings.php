@@ -25,7 +25,8 @@ $d_settings = array(
     'poll_mcq_correct' => 'Correct!',
     'poll_mcq_incorrect' => 'Incorrect!',   
     'poll_view_result_link'=> '0',
-    'poll_set_message'=> '0'
+    'poll_set_message'=> '0',
+    'poll_only_users' => '0'
      
 );
 
@@ -72,7 +73,11 @@ extract(wp_parse_args($s_set, $d_settings));
 <input class='poll_settings' type="text" name="pol_set[poll_set_date]" id="poll_set_date" value='<?php echo $poll_set_date ?>' />
 
 <p><input id="poll_set_title" type="checkbox" name="pol_set[poll_set_title]" value="1" <?php checked(1, $poll_set_title); ?>/> <label for="poll_set_title">Show title on top of Poll</label></p>
+
 <p><input id="poll_set_blank" type="checkbox" name="pol_set[poll_set_blank]" value="1" <?php checked(1, $poll_set_blank); ?>/> <label for="poll_set_blank">Show poll in a blank page(without header, sidebar, footer)</label></p>
+
+
+<p><input id="poll_only_users" type="checkbox" name="pol_set[poll_only_users]" value="1" <?php checked(1, $poll_only_users); ?>/> <label for="poll_only_users">Allow only registered users </label></p>
 
 
 <?php

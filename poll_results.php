@@ -4,6 +4,20 @@
  * To change this template, choose Tools | Templates
  * and open the template in the editor.
  */
+$countrs = $this -> get_countries($post_id);
+
+$browsers = $this -> get_browsers($post_id);
+
+$oss = $this -> get_oss($post_id);
+
+
+$usrs = $this -> get_usrs($post_id);
+
+
+
+$op_per = $this-> get_option_percentage($post_id);
+
+var_dump($op_per);
 ?>
 
 <div id="tabspoll" style="margin-top: 50px">
@@ -11,19 +25,44 @@
     <li><a href="#tabspoll-1">Country</a></li>
     <li><a href="#tabspoll-2">Operating System</a></li>
     <li><a href="#tabspoll-3">Browser</a></li>
+    <li><a href="#tabspoll-4">Registered/Unregistered</a></li>
   </ul>
   <div id="tabspoll-1">
-      <div id="highcontain"></div>
-      <?php var_dump($this -> get_countries($post_id)); ?>
-      
-      <?php $this -> output_javascript('#highcontain', 'Countries' , $this -> get_countries($post_id)); ?>
-    <p>Proin elit arcu, rutrum commodo, vehicula tempus, commodo a, risus. Curabitur nec arcu. Donec sollicitudin mi sit amet mauris. Nam elementum quam ullamcorper ante. Etiam aliquet massa et lorem. Mauris dapibus lacus auctor risus. Aenean tempor ullamcorper leo. Vivamus sed magna quis ligula eleifend adipiscing. Duis orci. Aliquam sodales tortor vitae ipsum. Aliquam nulla. Duis aliquam molestie erat. Ut et mauris vel pede varius sollicitudin. Sed ut dolor nec orci tincidunt interdum. Phasellus ipsum. Nunc tristique tempus lectus.</p>
-  </div>
+      <div id="highcontain"></div>      
+      <?php $this -> output_javascript('#highcontain', __('Countries', 'wp-super-poll' ) , $countrs[2]); ?>
+      Total votes: <?php echo $countrs[0]; ?>
+      <br/>
+<?php foreach($countrs[1] as $k=>$c): echo "$k:$c<br/>";  endforeach;  ?>
+      </div>
+    
+    
   <div id="tabspoll-2">
-    <p>Morbi tincidunt, dui sit amet facilisis feugiat, odio metus gravida ante, ut pharetra massa metus id nunc. Duis scelerisque molestie turpis. Sed fringilla, massa eget luctus malesuada, metus eros molestie lectus, ut tempus eros massa ut dolor. Aenean aliquet fringilla sem. Suspendisse sed ligula in ligula suscipit aliquam. Praesent in eros vestibulum mi adipiscing adipiscing. Morbi facilisis. Curabitur ornare consequat nunc. Aenean vel metus. Ut posuere viverra nulla. Aliquam erat volutpat. Pellentesque convallis. Maecenas feugiat, tellus pellentesque pretium posuere, felis lorem euismod felis, eu ornare leo nisi vel felis. Mauris consectetur tortor et purus.</p>
+                  <div id="oscontain"></div>    
+           <?php $this -> output_javascript('#oscontain', __('Operating Systems', 'wp-super-poll' ) , $oss[2]); ?>
+      Total votes: <?php echo $countrs[0]; ?>
+      <br/>
+<?php foreach($oss[1] as $k=>$c): echo "$k:$c<br/>";  endforeach;  ?>
+    
   </div>
-  <div id="tabspoll-3">
-    <p>Mauris eleifend est et turpis. Duis id erat. Suspendisse potenti. Aliquam vulputate, pede vel vehicula accumsan, mi neque rutrum erat, eu congue orci lorem eget lorem. Vestibulum non ante. Class aptent taciti sociosqu ad litora torquent per conubia nostra, per inceptos himenaeos. Fusce sodales. Quisque eu urna vel enim commodo pellentesque. Praesent eu risus hendrerit ligula tempus pretium. Curabitur lorem enim, pretium nec, feugiat nec, luctus a, lacus.</p>
-    <p>Duis cursus. Maecenas ligula eros, blandit nec, pharetra at, semper at, magna. Nullam ac lacus. Nulla facilisi. Praesent viverra justo vitae neque. Praesent blandit adipiscing velit. Suspendisse potenti. Donec mattis, pede vel pharetra blandit, magna ligula faucibus eros, id euismod lacus dolor eget odio. Nam scelerisque. Donec non libero sed nulla mattis commodo. Ut sagittis. Donec nisi lectus, feugiat porttitor, tempor ac, tempor vitae, pede. Aenean vehicula velit eu tellus interdum rutrum. Maecenas commodo. Pellentesque nec elit. Fusce in lacus. Vivamus a libero vitae lectus hendrerit hendrerit.</p>
-  </div>
+    
+    
+  <div id="tabspoll-3">      
+  
+      <div id="brcontain"></div>    
+           <?php $this -> output_javascript('#brcontain', __('Browsers', 'wp-super-poll' ) , $browsers[2]); ?>
+      Total votes: <?php echo $countrs[0]; ?>
+      <br/>
+<?php foreach($browsers[1] as $k=>$c): echo "$k:$c<br/>";  endforeach;  ?>
+      </div>
+    
+  <div id="tabspoll-4">      
+  
+      <div id="regcontain"></div>    
+           <?php $this -> output_javascript('#regcontain', __('Registed/Unregisterd', 'wp-super-poll' ) , $usrs[2]); ?>
+      Total votes: <?php echo $usrs[0]; ?>
+      <br/>
+<?php foreach($usrs[1] as $k=>$c): echo "$k:$c<br/>";  endforeach;  ?>
+      </div>
+  
+  
 </div>

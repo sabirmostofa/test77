@@ -1,5 +1,4 @@
 <?php
-
 /*
   Plugin Name: WP-Super-Polls
   Plugin URI: http://top-wpp.com/
@@ -30,6 +29,7 @@ class wpSuperPolls {
     //initializing variables and adding hooks
     function __construct() {
         global $wpdb;
+        load_plugin_textdomain('wp-super-poll', false, basename( dirname( __FILE__ ) ) . '/languages' );
         //$this->set_meta();
         $this->table_que = $wpdb->prefix . 'super_polls_ques';
         $this->table_opt = $wpdb->prefix . 'super_polls_opts';
@@ -259,7 +259,9 @@ class wpSuperPolls {
 
 
         //delete answers
-        $wpdb->query("");
+        $wpdb->delete(
+                $this->table_ans, array('ques_id' => $postid)
+        );
 
         //question
         $wpdb->delete(
@@ -382,7 +384,7 @@ class wpSuperPolls {
     }
 
     function render_settings_metabox($post) {
-        var_dump(get_plugin_data(__FILE__));
+        //var_dump(get_plugin_data(__FILE__));
         include 'poll_settings.php';
     }
 
@@ -799,9 +801,10 @@ class wpSuperPolls {
     //cleanup when a poll option is deleted
     function delete_poll_option($post_id, $opt_id) {
         global $wpdb;
-        return $wpdb->delete($this->table_opt, array('ques_id' => $post_id, 'opt_id' => $opt_id));
+        $wpdb->delete($this->table_opt, array('ques_id' => $post_id, 'opt_id' => $opt_id));
 
         //delete related answers too
+        $wpdb->delete($this->table_ans, array('ques_id' => $post_id, 'option_id' => $opt_id));
     }
 
     // ajax functions
@@ -814,10 +817,16 @@ class wpSuperPolls {
 
     function ajax_poll_submit() {
         global $wpdb;
+        $is_user = ( is_user_logged_in() ) ? 1 : 0;
         $wpdb->show_errors();
         $poll_id = $_POST['poll_id'];
         $s_set = get_post_meta($poll_id, 'pol_set', true);
         $end_date = $s_set['poll_set_date'];
+        
+        $only_user = $s_set['poll_only_users'];
+        if($only_user)
+            if(!$is_user)
+                exit('only-user');
 
 
 
@@ -833,7 +842,7 @@ class wpSuperPolls {
 
         $browser = $_POST['browser'];
         $platform = $_POST['platform'];
-        $is_user = ( is_user_logged_in() ) ? 1 : 0;
+        
         $uniqid = uniqid();
         $wpdb->insert(
                 $this->table_ans, array(
@@ -910,6 +919,28 @@ class wpSuperPolls {
 
 //generate chart contents function 
 // functions return the datas as a key value array in percentage
+    
+    function get_option_percentage($poll_id){
+        global $wpdb;
+        $myrows = $wpdb->get_results( "SELECT * from $this->table_ans where ques_id=$poll_id ", 'ARRAY_A' );
+        
+        $ar = array();
+        foreach($myrows as $row){
+            if(!array_key_exists($row['option_id'],$ar)){
+                $ar[$row['option_id']] = 1;
+            }else
+                $ar[$row['option_id']] += 1;
+        }
+        
+        $ar_per = array();
+        
+        $tot = array_sum($ar);
+        foreach($ar as $id => $num ){
+            $ar_per[$id] = round(($num/$tot)*100, 2);
+        }
+        return(array($ar, $ar_per));
+        
+    }
 
     function get_country($ip) {
         global $wpdb;
@@ -941,86 +972,186 @@ class wpSuperPolls {
 	           
 	", $poll_id
         ));
-        
+        $t = count($ips);
         $count = 0;
-        foreach($ips as $ip){
-           $co = $this ->get_country($ip);
-           if($co){
-               $count ++;
-               if(array_key_exists($co, $ar))
+        foreach ($ips as $ip) {
+            $co = $this->get_country($ip);
+            if ($co) {
+                $count++;
+                if (array_key_exists($co, $ar))
                     $ar[$co] +=1;
-               else 
-                   $ar[$co] =1;
-           }
-                    
+                else
+                    $ar[$co] = 1;
+            }
         }
-        
-        foreach($ar as $co => $elem){
-            $ar[$co] = round(($elem/$count)*100, 2);
+        $ar['Unidentified'] = $t - $count;
+        $arb = $ar;
+
+        foreach ($ar as $co => $elem) {
+            $ar[$co] = round(($elem / $count) * 100, 2);
         }
-        
-             
-        return $ar;
+
+
+        return array($t, $arb, $ar);
     }
 
     function get_browsers($poll_id) {
-        
+        global $wpdb;
+        $ar = array();
+
+        $brws = $wpdb->get_col($wpdb->prepare(
+                        "
+	SELECT      browser
+	FROM        $this->table_ans
+	WHERE       ques_id = %d 
+	           
+	", $poll_id
+        ));
+
+        $t = count($brws);
+
+        foreach ($brws as $br) {
+
+            if ($br) {
+                $count++;
+                if (array_key_exists($br, $ar))
+                    $ar[$br] +=1;
+                else
+                    $ar[$br] = 1;
+            }
+        }
+        $ar['Unidentified'] = $t - $count;
+
+        $arb = $ar;
+
+        foreach ($ar as $co => $elem) {
+            $ar[$co] = round(($elem / $count) * 100, 2);
+        }
+
+
+        return array($t, $arb, $ar);
     }
 
-    function get_ops($poll_id) {
-        
-    }
+    function get_oss($poll_id) {
 
-    function get_usrs($poll_id) {
-        
+        global $wpdb;
+        $ar = array();
+
+        $brws = $wpdb->get_col($wpdb->prepare(
+                        "
+	SELECT      os
+	FROM        $this->table_ans
+	WHERE       ques_id = %d 
+	           
+	", $poll_id
+        ));
+        $t = count($brws);
+        //var_dump($brws);
+        foreach ($brws as $br) {
+
+            if ($br) {
+                $count++;
+                if (array_key_exists($br, $ar))
+                    $ar[$br] +=1;
+                else
+                    $ar[$br] = 1;
+            }
+        }
+        var_dump($ar);
+        $ar['Unidentified'] = $t - $count;
+        $arb = $ar;
+
+        foreach ($ar as $co => $elem) {
+            $ar[$co] = round(($elem / $count) * 100, 2);
+        }
+
+
+        return array($t, $arb, $ar);
     }
     
-    function output_javascript($container, $name , $data){
+    
+
+    function get_usrs($poll_id) {
+        global $wpdb;
+        $ar = array('Registered User' => 0, 'Not Registered' => 0);
+
+        $brws = $wpdb->get_col($wpdb->prepare(
+                        "
+	SELECT      is_user
+	FROM        $this->table_ans
+	WHERE       ques_id = %d 
+	           
+	", $poll_id
+        ));
+
+        $t = count($brws);
+
+        foreach ($brws as $br) {
+
+            if ($br)
+                $ar['Registered User'] +=1;
+            else
+                $ar['Not Registered'] +=1;
+        }
+
+        $count = count($brws);
+        $ar['unidentified'] = $t - $count;
+        $arb = $ar;
+        foreach ($ar as $co => $elem) {
+            $ar[$co] = round(($elem / $count) * 100, 2);
+        }
+
+
+        return array($t, $arb, $ar);
+    }
+
+    function output_javascript($container, $name, $data) {
         ?>
         <script type="text/javascript">
-         jQuery(function ($) {
-    $('<?php echo $container ?>').highcharts({
-        chart: {
-            plotBackgroundColor: null,
-            plotBorderWidth: null,
-            plotShadow: false
-        },
-        title: {
-            text: '<?php echo $name ?>'
-        },
-        tooltip: {
-    	    pointFormat: '{series.name}: <b>{point.percentage:.1f}%</b>'
-        },
-        plotOptions: {
-            pie: {
-                allowPointSelect: true,
-                cursor: 'pointer',
-                dataLabels: {
-                    enabled: true,
-                    color: '#000000',
-                    connectorColor: '#000000',
-                    format: '<b>{point.name}</b>: {point.percentage:.1f} %'
-                }
-            }
-        },
-        series: [{
-            type: 'pie',
-            name: '<?php echo $name ?>',
-            data: [
-           <?php foreach($data as $k=>$v): 
-                echo  "['$k', $v],";
-               ?>
-                   
-                   <?php endforeach; ?>
-            ]
-        }]
-    });
-});
+            jQuery(function($) {
+                $('<?php echo $container ?>').highcharts({
+                    chart: {
+                        plotBackgroundColor: null,
+                        plotBorderWidth: null,
+                        plotShadow: false
+                    },
+                    title: {
+                        text: '<?php echo $name ?>'
+                    },
+                    tooltip: {
+                        pointFormat: '{series.name}: <b>{point.percentage:.1f}%</b>'
+                    },
+                    plotOptions: {
+                        pie: {
+                            allowPointSelect: true,
+                            cursor: 'pointer',
+                            dataLabels: {
+                                enabled: true,
+                                color: '#000000',
+                                connectorColor: '#000000',
+                                format: '<b>{point.name}</b>: {point.percentage:.1f} %'
+                            }
+                        }
+                    },
+                    series: [{
+                            type: 'pie',
+                            name: '<?php echo $name ?>',
+                            data: [
+        <?php
+        foreach ($data as $k => $v):
+            echo "['$k', $v],";
+            ?>
 
-          
-    </script>
-<?php     
-        
+        <?php endforeach; ?>
+                            ]
+                        }]
+                });
+            });
+
+
+        </script>
+        <?php
     }
 
 }
+

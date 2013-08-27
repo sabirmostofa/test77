@@ -21,7 +21,12 @@ jQuery(document).ready(function($){
                     alert('Poll submission is over');
                     return;
                 }
-                alert(data);
+                
+                if(data == 'only-user'){
+                    alert('Please login or sign up to vote');
+                    return;
+                }
+                alert("Thanks you for your vote!");
                 $.cookie('wp_poll_cookies', cooks , { expires: 10000, path: '/' });
             }
             
@@ -33,6 +38,11 @@ jQuery(document).ready(function($){
     $('.poll_submit').click(function(e){ 
         var poll_id = $(this).prev().val() ;
         var opt_checked = $("input[name='poll-"+ poll_id + "']:checked").val();
+        if(opt_checked === undefined){
+            alert("You must have to select a option to vote");
+            return;
+        }
+        
         var all_cookies = $.cookie('wp_poll_cookies');
         if(all_cookies === undefined){
             var cooks = new Array();
